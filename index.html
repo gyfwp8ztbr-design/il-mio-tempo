@@ -296,7 +296,7 @@ details ul{margin:8px 0 0;padding-left:18px}
 
 <div class="scrim" id="scrim2" hidden>
   <form class="sheet" id="sheet2" role="dialog" aria-modal="true" aria-labelledby="sheet2-h">
-    <h2 id="sheet2-h">Attività fatta</h2>
+    <h2 id="sheet2-h">Segna come fatta</h2>
     <div id="d-what" class="empty"></div>
     <div class="two">
       <label for="d-min">Tempo impiegato (minuti)<input id="d-min" type="number" min="5" step="5"></label>
@@ -818,14 +818,16 @@ function renderDay(){
   st.noTimeItems=m.noTime;
   // programma del giorno
   var rows=[];
+  var blocks=m.items.filter(function(it){return it.kind==="act"&&it.a.calendario}).map(function(it){return String(it.a.attivita).toLowerCase()});
   st.events.filter(function(e){return sameDay(e.start,d)}).forEach(function(e){
+    var tl=String(e.title||"").toLowerCase();
+    if(blocks.some(function(b){return tl.indexOf(b)>=0}))return;
     rows.push('<div class="ev'+(e.kind!=="work"?" sys":"")+(e.kind==="work"&&!e.role?" none":"")+'" style="--rc:'+(e.role?roleColor(e.role):"var(--c11)")+'"><div class="t">'+hm(e.start)+"–"+hm(e.end)+" · "+fm(Math.round((e.end-e.start)/60000))+'</div><div class="n">'+esc(e.title||"(senza titolo)")+"</div></div>");
   });
   m.items.forEach(function(it){
     if(it.kind==="act"){
       var a=it.a;
-      if(a.calendario)return;
-      rows.push('<div class="ev act" style="--rc:'+roleColor(a.ruolo)+'"><div class="t">'+(a.oraPrev?esc(a.oraPrev)+" · ":"")+(+a.prevMin>0?"previsto "+fm(a.prevMin):"tempo da definire")+'</div><div class="n">'+esc(a.attivita)+(a.cliente?" · "+esc(a.cliente):"")+"</div></div>");
+      rows.push('<div class="ev act" style="--rc:'+roleColor(a.ruolo)+'"><div class="t">'+(a.oraPrev?esc(a.oraPrev)+" · ":"")+(+a.prevMin>0?"previsto "+fm(a.prevMin):"tempo da definire")+(a.calendario?" · in calendario":"")+'</div><div class="n">'+esc(a.attivita)+(a.cliente?" · "+esc(a.cliente):"")+'</div><div class="btns"><button class="btn sm primary" data-a="done" data-id="'+esc(a.id)+'">Fatta</button><button class="btn sm" data-a="edit" data-id="'+esc(a.id)+'">Modifica</button></div></div>');
     }else{
       var t=it.t;
       if(t.timed)return;
@@ -1166,6 +1168,11 @@ $("presets").addEventListener("click",function(e){
   saveAvail({lavoro:true,inizio:P[0],fine:P[1],fuori:0});
 });
 $("dmicro").addEventListener("click",openMicro);
+$("dlist").addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("button[data-a]");if(!b)return;
+  var a=findAct(b.dataset.id);if(!a)return;
+  if(b.dataset.a==="done")openDone(a.id);else if(b.dataset.a==="edit")openForm({act:a});
+});
 $("m-mins").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("button[data-m]");if(b)saveMicro(+b.dataset.m)});
 $("sheet6").addEventListener("submit",function(e){e.preventDefault();saveMicro(Math.round(+$("m-min").value||0))});
 $("m-cancel").addEventListener("click",function(){$("scrim6").hidden=true});
