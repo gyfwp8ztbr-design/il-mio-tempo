@@ -227,6 +227,10 @@ details ul{margin:8px 0 0;padding-left:18px}
       <h2 id="h-dday" style="margin-bottom:10px">Programma del giorno</h2>
       <div class="list" id="dlist" style="margin-top:0"></div>
     </section>
+    <section id="dpend-wrap" aria-labelledby="h-dpend" hidden>
+      <h2 id="h-dpend" style="margin-bottom:10px">Ancora da fare, senza giorno o in arretrato</h2>
+      <div class="list" id="dpend" style="margin-top:0"></div>
+    </section>
     <p class="foot">Nel serbatoio entrano tutti gli eventi con orario del calendario (anche quelli senza ruolo, pranzi e Focus time compresi) e il tempo previsto delle attività del registro non ancora messe in calendario. Oggi il disponibile parte da adesso. L'orario di ogni giornata si imposta sopra: senza impostazione valgono 8:30–19:00 nei giorni feriali e nessun orario nel fine settimana.</p>
   </div>
 
@@ -364,6 +368,7 @@ details ul{margin:8px 0 0;padding-left:18px}
 <div class="scrim" id="scrim7" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet7-h">
     <h2 id="sheet7-h">Impostazioni</h2>
+    <div class="empty">Versione dell'app: 3</div>
     <label for="s-cid">Codice cliente Google (Client ID)<input id="s-cid" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xxxxxxxx.apps.googleusercontent.com"></label>
     <div class="empty" id="s-status"></div>
     <div class="acts" style="justify-content:flex-start">
@@ -835,6 +840,20 @@ function renderDay(){
     }
   });
   $("dlist").innerHTML=rows.length?rows.join(""):'<div class="empty">Niente in programma per questa giornata.</div>';
+  // attività aperte senza giorno previsto o in arretrato: si vedono quando guardi oggi
+  var pend=[];
+  if(isToday){
+    st.acts.forEach(function(a){
+      if(a.stato==="fatta")return;
+      if(!a.giornoPrev||a.giornoPrev<ds)pend.push(a);
+    });
+    pend.sort(sortOpen);
+  }
+  $("dpend-wrap").hidden=!pend.length;
+  $("dpend").innerHTML=pend.map(function(a){
+    var why=a.giornoPrev?"previsto "+fmtDay(a.giornoPrev)+" · in arretrato":"senza giorno previsto";
+    return '<div class="ev act" style="--rc:'+roleColor(a.ruolo)+'"><div class="t">'+esc(why)+(+a.prevMin>0?" · "+fm(a.prevMin):"")+'</div><div class="n">'+esc(a.attivita)+(a.cliente?" · "+esc(a.cliente):"")+'</div><div class="btns"><button class="btn sm primary" data-a="done" data-id="'+esc(a.id)+'">Fatta</button><button class="btn sm" data-a="today" data-id="'+esc(a.id)+'">Metti oggi</button><button class="btn sm" data-a="edit" data-id="'+esc(a.id)+'">Modifica</button></div></div>';
+  }).join("");
 }
 
 function setDay(d){
@@ -1168,11 +1187,15 @@ $("presets").addEventListener("click",function(e){
   saveAvail({lavoro:true,inizio:P[0],fine:P[1],fuori:0});
 });
 $("dmicro").addEventListener("click",openMicro);
-$("dlist").addEventListener("click",function(e){
+function dayActions(e){
   var b=e.target.closest&&e.target.closest("button[data-a]");if(!b)return;
   var a=findAct(b.dataset.id);if(!a)return;
-  if(b.dataset.a==="done")openDone(a.id);else if(b.dataset.a==="edit")openForm({act:a});
-});
+  if(b.dataset.a==="done")openDone(a.id);
+  else if(b.dataset.a==="edit")openForm({act:a});
+  else if(b.dataset.a==="today")simpleUpdate(a.id,{giornoPrev:dstr(st.day),stato:"da_fare"},"Spostata a oggi.");
+}
+$("dlist").addEventListener("click",dayActions);
+$("dpend").addEventListener("click",dayActions);
 $("m-mins").addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("button[data-m]");if(b)saveMicro(+b.dataset.m)});
 $("sheet6").addEventListener("submit",function(e){e.preventDefault();saveMicro(Math.round(+$("m-min").value||0))});
 $("m-cancel").addEventListener("click",function(){$("scrim6").hidden=true});

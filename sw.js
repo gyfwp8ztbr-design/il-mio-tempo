@@ -1,5 +1,5 @@
 // Service worker: tiene in cache la pagina per aprirla anche offline; cerca sempre prima la versione nuova.
-var CACHE="il-mio-tempo-v2";
+var CACHE="il-mio-tempo-v3";
 var FILES=["./","index.html","manifest.webmanifest","icon-180.png","icon-192.png","icon-512.png"];
 self.addEventListener("install",function(e){e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(FILES)}).then(function(){return self.skipWaiting()}))});
 self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(x){return x!==CACHE}).map(function(x){return caches.delete(x)}))}).then(function(){return self.clients.claim()}))});
